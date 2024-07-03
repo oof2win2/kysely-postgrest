@@ -1,21 +1,18 @@
 {
   "name": "kysely-postgrest",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "keywords": [],
   "author": "",
-  "license": "ISC",
+  "main": "index.js",
   "devDependencies": {
     "kysely": "^0.27.3"
   },
   "peerDependencies": {
     "kysely": "^0.27.3"
   },
-  "dependencies": {
-    "@supabase/postgrest-js": "^1.15.7"
+  "description": "",
+  "keywords": [],
+  "license": "ISC",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
   }
 }
