@@ -1,9 +1,12 @@
-import type { PostgrestQueryBuilder } from "@supabase/postgrest-js";
-import { WhereNode, type OperationNode, type SelectQueryNode } from "kysely";
-import parseSelectionNode from "./nodes/SelectionNode";
-import parseWhereNode from "./nodes/WhereNode";
-import { parseOperationNode } from "./nodes/OperationNode";
-import parseLimitNode from "./nodes/LimitNode";
+import {
+	AliasNode,
+	IdentifierNode,
+	ReferenceNode,
+	TableNode,
+	WhereNode,
+	type OperationNode,
+	type SelectQueryNode,
+} from "kysely";
 
 const addToUrl = (base: URL, added: URLSearchParams) => {
 	// biome-ignore lint/complexity/noForEach: <explanation>
@@ -11,23 +14,53 @@ const addToUrl = (base: URL, added: URLSearchParams) => {
 	return base;
 };
 
-export default function parseSelectQueryNode(
-	node: SelectQueryNode,
-	url: URL,
+export default function parseSelectQuery(
+	rootNode: SelectQueryNode,
+	baseUrl: string,
 ): URL {
-	let newUrl = url;
-	const selections = node.selections?.map((s) => parseSelectionNode(s)) ?? [];
-	if (selections) newUrl.searchParams.set("select", selections.join(","));
+	const url = new URL(baseUrl);
 
-	const from = node.from?.froms.map((n) => parseOperationNode(n)) ?? [];
-	if (from.length !== 1) throw new Error("Must supply one from paramter");
-	newUrl.pathname += "/" + from[0];
+	if (!rootNode.from || rootNode.from.froms.length > 1) {
+		throw new Error("Multiple tables not supported");
+	}
+	const fromNode = rootNode.from.froms[0];
+	if (!TableNode.is(fromNode)) {
+		throw new Error("Only table nodes are selectable");
+	}
+	url.pathname = fromNode.table.identifier.name;
 
-	const whereClauses = node.where ? parseWhereNode(node.where) : "";
-	newUrl = addToUrl(newUrl, new URLSearchParams(whereClauses));
+	if (!rootNode.selections?.length) throw new Error("No selections provided");
+	const selectParams = rootNode.selections.map((node): string => {
+		const selection = node.selection;
 
-	const limit = node.limit && parseLimitNode(node.limit);
-	if (limit) newUrl = addToUrl(newUrl, limit);
+		if (selection.kind === "ColumnNode") {
+			return selection.column.name;
+		}
+
+		if (selection.kind === "AliasNode") {
+			const alias = selection.alias;
+			const ref = selection.node;
+			if (!IdentifierNode.is(alias))
+				throw new Error("Alias must be an identifier");
+			if (!ReferenceNode.is(ref))
+				throw new Error("Alias must reference a node");
+			if (ref.column.kind === "SelectAllNode") return `${alias.name}:*`;
+			return `${alias.name}:${ref.column.column.name}`;
+		}
+
+		if (selection.kind === "SelectAllNode") {
+			return "*";
+		}
+
+		if (selection.kind === "ReferenceNode") {
+			const col = selection.column;
+			if (col.kind === "ColumnNode") return col.column.name;
+			return "*";
+		}
+
+		throw new Error("Unsupported selection kind");
+	});
+	url.searchParams.set("select", selectParams.join(","));
 
 	return url;
 }

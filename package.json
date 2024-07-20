@@ -4,6 +4,7 @@
   "author": "",
   "main": "index.js",
   "devDependencies": {
+    "@types/bun": "^1.1.6",
     "kysely": "^0.27.3"
   },
   "peerDependencies": {
