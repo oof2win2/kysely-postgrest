@@ -3,10 +3,12 @@ import {
 	IdentifierNode,
 	ReferenceNode,
 	TableNode,
+	ValueNode,
 	WhereNode,
 	type OperationNode,
 	type SelectQueryNode,
 } from "kysely";
+import { tostring } from "./tostring";
 
 const addToUrl = (base: URL, added: URLSearchParams) => {
 	// biome-ignore lint/complexity/noForEach: <explanation>
@@ -61,6 +63,20 @@ export default function parseSelectQuery(
 		throw new Error("Unsupported selection kind");
 	});
 	url.searchParams.set("select", selectParams.join(","));
+
+	if (rootNode.limit) {
+		const limit = rootNode.limit;
+		if (limit.kind !== "LimitNode") throw new Error("Unsupported limit kind");
+		if (!ValueNode.is(limit.limit)) throw new Error("Unsupported limit kind");
+		url.searchParams.set("limit", tostring(limit.limit.value));
+	}
+	if (rootNode.offset) {
+		const offset = rootNode.offset;
+		if (offset.kind !== "OffsetNode")
+			throw new Error("Unsupported offset kind");
+		if (!ValueNode.is(offset.offset)) throw new Error("Unsupported limit kind");
+		url.searchParams.set("offset", tostring(offset.offset.value));
+	}
 
 	return url;
 }

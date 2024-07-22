@@ -96,4 +96,31 @@ describe("parseSelectQuery", () => {
 			"/post?select=post_id:id,post_title:title",
 		);
 	});
+
+	it("Should correctly parse limits", () => {
+		const select = kysely.selectFrom("post").selectAll().limit(10);
+		const url = parseSelectQuery(select.toOperationNode(), "http://localhost")
+			.toString()
+			.slice("http://localhost".length);
+
+		expect(decodeURIComponent(url)).toBe("/post?select=*&limit=10");
+	});
+
+	it("Should correctly parse an offset", () => {
+		const select = kysely.selectFrom("post").selectAll().offset(10);
+		const url = parseSelectQuery(select.toOperationNode(), "http://localhost")
+			.toString()
+			.slice("http://localhost".length);
+
+		expect(decodeURIComponent(url)).toBe("/post?select=*&offset=10");
+	});
+
+	it("Should correctly parse a limit and offset", () => {
+		const select = kysely.selectFrom("post").selectAll().limit(10).offset(10);
+		const url = parseSelectQuery(select.toOperationNode(), "http://localhost")
+			.toString()
+			.slice("http://localhost".length);
+
+		expect(decodeURIComponent(url)).toBe("/post?select=*&limit=10&offset=10");
+	});
 });
